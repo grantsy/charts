@@ -1,0 +1,26 @@
+{{- if .Values.autoscaling.enabled -}}
+{{- if eq .Values.database.driver "sqlite" -}}
+{{- fail "autoscaling cannot be enabled with database.driver=sqlite (single-writer)" -}}
+{{- end }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "grantsy.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "grantsy.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "grantsy.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

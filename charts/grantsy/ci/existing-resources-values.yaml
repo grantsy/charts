@@ -1,0 +1,19 @@
+# Existing-resources scenario: operator brings their own ConfigMap, PVC, and Secrets.
+# The chart reads these without forking.
+existingConfigMap: my-grantsy-config
+persistence:
+  enabled: true
+  existingClaim: my-grantsy-data
+ingress:
+  webhook:
+    enabled: true
+    host: hooks.example.test
+  api:
+    enabled: true
+    host: api.example.test
+    tls:
+      enabled: true
+      secretName: api-tls-cert
+envFrom:
+  - secretRef:
+      name: my-existing-app-secrets

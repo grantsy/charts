@@ -1,0 +1,26 @@
+{{- if not .Values.existingConfigMap -}}
+{{- /*
+  Merge the operator-supplied `.Values.config` with a chart-managed `database:` block so that
+  the driver / dsn / namespace stay aligned with persistence and Secret wiring. The operator's
+  config takes precedence for everything *except* the database block, which is owned by the chart.
+  Secret-bearing fields elsewhere in the config stay literal (e.g. `${API_KEY}`) and are resolved
+  by the Grantsy binary's os.ExpandEnv at startup.
+*/ -}}
+{{- $databaseBlock := dict -}}
+{{- if eq .Values.database.driver "sqlite" -}}
+{{-   $databaseBlock = dict "driver" "sqlite" "dsn" .Values.database.sqlite.path "namespace" .Values.database.namespace -}}
+{{- else if eq .Values.database.driver "postgres" -}}
+{{-   $databaseBlock = dict "driver" "postgres" "dsn" "${DATABASE_DSN}" "namespace" .Values.database.namespace -}}
+{{- end -}}
+{{- $merged := merge (dict "database" $databaseBlock) (deepCopy .Values.config) -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "grantsy.configMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "grantsy.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+{{ toYaml $merged | indent 4 }}
+{{- end }}

@@ -1,0 +1,40 @@
+{{- if .Values.ingress.webhook.enabled -}}
+{{- $host := required "ingress.webhook.host is required when ingress.webhook.enabled=true" .Values.ingress.webhook.host -}}
+{{- $svcName := include "grantsy.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "grantsy.fullname" . }}-webhook
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "grantsy.labels" . | nindent 4 }}
+    grantsy.io/ingress: webhook
+  {{- with .Values.ingress.webhook.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.webhook.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  {{- if .Values.ingress.webhook.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ $host | quote }}
+      {{- with $.Values.ingress.webhook.tls.secretName }}
+      secretName: {{ . | quote }}
+      {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.webhook.path | quote }}
+            pathType: {{ .Values.ingress.webhook.pathType }}
+            backend:
+              service:
+                name: {{ $svcName }}
+                port:
+                  number: {{ $svcPort }}
+{{- end }}

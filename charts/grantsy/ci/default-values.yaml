@@ -1,0 +1,20 @@
+# Default scenario: SQLite + persistence + webhook ingress only.
+# Provides the minimum required values to render the chart cleanly (webhook host).
+ingress:
+  webhook:
+    enabled: true
+    host: hooks.example.test
+config:
+  env: prod
+  server:
+    host: 0.0.0.0
+    port: 8080
+  log:
+    level: info
+    format: json
+  entitlements:
+    default_plan: free
+    plans:
+      - {id: free, name: Free, features: [dashboard]}
+    features:
+      - {id: dashboard, name: Dashboard, description: Basic}

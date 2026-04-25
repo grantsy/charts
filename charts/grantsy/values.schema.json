@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "grantsy chart values",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 0 },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag":        { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      },
+      "required": ["repository", "pullPolicy"]
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": { "name": { "type": "string" } },
+        "required": ["name"]
+      }
+    },
+    "nameOverride":     { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create":      { "type": "boolean" },
+        "name":        { "type": "string" },
+        "annotations": { "type": "object" },
+        "automountServiceAccountToken": { "type": "boolean" }
+      },
+      "required": ["create"]
+    },
+    "podSecurityContext": { "type": "object" },
+    "securityContext":    { "type": "object" },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type":        { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+        "port":        { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "annotations": { "type": "object" }
+      },
+      "required": ["type", "port"]
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "api":     { "$ref": "#/definitions/ingressBlock" },
+        "webhook": { "$ref": "#/definitions/ingressBlock" }
+      },
+      "required": ["api", "webhook"]
+    },
+    "database": {
+      "type": "object",
+      "properties": {
+        "driver":    { "type": "string", "enum": ["sqlite", "postgres"] },
+        "namespace": { "type": "string", "minLength": 1 },
+        "sqlite": {
+          "type": "object",
+          "properties": { "path": { "type": "string", "minLength": 1 } },
+          "required": ["path"]
+        },
+        "postgres": {
+          "type": "object",
+          "properties": {
+            "dsnSecret": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "key":  { "type": "string", "minLength": 1 }
+              },
+              "required": ["name", "key"]
+            }
+          },
+          "required": ["dsnSecret"]
+        }
+      },
+      "required": ["driver", "namespace"]
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled":       { "type": "boolean" },
+        "existingClaim": { "type": "string" },
+        "storageClass":  { "type": "string" },
+        "accessModes":   { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "size":          { "type": "string", "minLength": 1 },
+        "mountPath":     { "type": "string", "minLength": 1 },
+        "annotations":   { "type": "object" }
+      },
+      "required": ["enabled", "size", "mountPath"]
+    },
+    "existingConfigMap": { "type": "string" },
+    "config":            { "type": "object" },
+    "env":               { "type": "array", "items": { "type": "object" } },
+    "envFrom":           { "type": "array", "items": { "type": "object" } },
+    "extraVolumes":      { "type": "array", "items": { "type": "object" } },
+    "extraVolumeMounts": { "type": "array", "items": { "type": "object" } },
+    "resources":         { "type": "object" },
+    "livenessProbe":     { "type": "object" },
+    "readinessProbe":    { "type": "object" },
+    "startupProbe":      { "type": ["object", "null"] },
+    "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 },
+    "podAnnotations":    { "type": "object" },
+    "podLabels":         { "type": "object" },
+    "nodeSelector":      { "type": "object" },
+    "tolerations":       { "type": "array" },
+    "affinity":          { "type": "object" },
+    "autoscaling": {
+      "type": "object",
+      "properties": {
+        "enabled":                        { "type": "boolean" },
+        "minReplicas":                    { "type": "integer", "minimum": 1 },
+        "maxReplicas":                    { "type": "integer", "minimum": 1 },
+        "targetCPUUtilizationPercentage": { "type": "integer", "minimum": 1, "maximum": 100 }
+      },
+      "required": ["enabled"]
+    },
+    "podDisruptionBudget": {
+      "type": "object",
+      "properties": {
+        "enabled":      { "type": "boolean" },
+        "minAvailable": { "type": ["integer", "string"] },
+        "maxUnavailable": { "type": ["integer", "string"] }
+      },
+      "required": ["enabled"]
+    },
+    "serviceMonitor": {
+      "type": "object",
+      "properties": {
+        "enabled":           { "type": "boolean" },
+        "interval":          { "type": "string" },
+        "scrapeTimeout":     { "type": "string" },
+        "labels":            { "type": "object" },
+        "relabelings":       { "type": "array" },
+        "metricRelabelings": { "type": "array" }
+      },
+      "required": ["enabled"]
+    }
+  },
+  "definitions": {
+    "ingressBlock": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "className":   { "type": "string" },
+        "host":        { "type": "string" },
+        "pathType":    { "type": "string", "enum": ["Prefix", "Exact", "ImplementationSpecific"] },
+        "path":        { "type": "string", "minLength": 1 },
+        "annotations": { "type": "object" },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "enabled":    { "type": "boolean" },
+            "secretName": { "type": "string" }
+          },
+          "required": ["enabled"]
+        },
+        "extraHosts": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["enabled", "path"]
+    }
+  }
+}

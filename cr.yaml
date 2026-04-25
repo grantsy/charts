@@ -1,0 +1,5 @@
+owner: grantsy
+git-repo: charts
+package-path: .cr-release-packages
+index-path: .cr-index
+release-name-template: "{{ .Name }}-{{ .Version }}"

@@ -1,0 +1,241 @@
+# -- Number of replicas. Forced to 1 by the chart when database.driver=sqlite (single-writer).
+replicaCount: 1
+
+image:
+  repository: ghcr.io/grantsy/grantsy
+  # -- Image tag. Defaults to .Chart.AppVersion (currently "v0.1.0") if empty.
+  # Keep the v-prefix when overriding.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+# Pod-level security context — matches the scratch image's nonroot 65534:65534 user.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  fsGroup: 65534
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+
+# Two ingresses. Webhook is enabled by default (always-on receiver from LemonSqueezy).
+# API is disabled by default; operator must set host to enable.
+# Both ingresses require `host` when `enabled=true` — chart fails render otherwise (intentional;
+# an enabled Ingress with empty host catches every unmatched request hitting the controller,
+# which would silently expose the API to the whole cluster).
+ingress:
+  api:
+    enabled: false
+    className: ""
+    host: ""           # REQUIRED if enabled=true
+    pathType: Prefix
+    path: /v1/
+    annotations: {}    # e.g. nginx rate-limit, cert-manager.io/cluster-issuer
+    tls:
+      enabled: false
+      secretName: ""   # existing TLS secret; if empty and tls.enabled=true, expects cert-manager annotations
+    extraHosts: []     # additional host rules pointing at same service
+  webhook:
+    enabled: true
+    className: ""
+    host: ""           # REQUIRED if enabled=true
+    pathType: Prefix
+    path: /v1/webhook
+    annotations: {}    # e.g. IP allowlist for LemonSqueezy egress IPs
+    tls:
+      enabled: false
+      secretName: ""
+
+# Database. Driver toggles persistence and DSN handling.
+# When driver=postgres the SQLite block is ignored; when driver=sqlite the Postgres block is ignored.
+database:
+  driver: sqlite       # sqlite | postgres
+  namespace: grantsy   # table prefix (sqlite) / schema name (postgres)
+
+  sqlite:
+    path: /var/lib/grantsy/grantsy.db   # must live under persistence.mountPath when persistence is on
+
+  postgres:
+    dsnSecret:
+      name: ""         # REQUIRED if driver=postgres
+      key: dsn
+
+# SQLite persistence. Auto-disabled by the chart when database.driver != sqlite.
+persistence:
+  enabled: true
+  existingClaim: ""    # if set, chart skips PVC creation and uses this claim
+  storageClass: ""     # "" = cluster default; "-" = disable dynamic provisioning
+  accessModes: [ReadWriteOnce]
+  size: 1Gi
+  mountPath: /var/lib/grantsy
+  annotations: {}
+
+# Application config. Two mutually-exclusive modes (existingConfigMap takes precedence):
+#   existingConfigMap: <name>   → mount that ConfigMap (key must be "config.yaml"); `config:` is ignored.
+#   config: { ... }             → render into a chart-managed ConfigMap.
+# `config:` defaults to {} so the operator must populate it. No example plans/features included.
+existingConfigMap: ""
+
+config: {}
+# Example shape (uncomment and fill in to use):
+# config:
+#   env: prod
+#   server:
+#     host: 0.0.0.0
+#     port: 8080
+#   log:
+#     level: info
+#     format: json
+#   metrics:
+#     enable: true
+#     go_metrics: false
+#     path: /metrics
+#   sync_period: ""           # e.g. "15m" for periodic LemonSqueezy pricing refresh
+#   entitlements:
+#     default_plan: ""        # operator-defined plan id
+#     plans: []
+#     features: []
+#   providers:
+#     lemonsqueezy:
+#       products: []          # [{product_id: 12345, plan_id: <your_plan_id>}]
+#   webhooks:
+#     endpoints: []           # [{url: https://app.example.com/hooks, secret: "${OUTGOING_WEBHOOK_SECRET_1}"}]
+#
+# Secret-bearing fields (api keys, webhook secrets) MUST be written as ${ENV_VAR} placeholders.
+# The Grantsy binary runs os.ExpandEnv on the file before parsing, resolving them from env vars
+# defined under `env:` / `envFrom:` below.
+#
+# NOTE: when database.driver=postgres, the chart automatically appends a `database:` block
+# referencing ${DATABASE_DSN}. When database.driver=sqlite, the chart appends a `database:` block
+# pointing at the SQLite file path. Operators using `existingConfigMap` are responsible for the
+# entire file contents including the `database:` block.
+
+# Environment variables passed to the container.
+#
+# These are standard Kubernetes env entries — use `value:` for literals, or `valueFrom:` to
+# reference an existing Secret / ConfigMap. The Grantsy binary runs os.ExpandEnv on the
+# config file, so any ${VAR} placeholder inside `config:` (or your existingConfigMap) resolves
+# to the matching env var here.
+#
+# All app credentials (X-Api-Key, LemonSqueezy keys, outgoing webhook secrets) are wired this way.
+# The chart does not create Secret resources for app credentials — operator manages those out-of-band.
+env: []
+  # - name: API_KEY
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: grantsy-app-secrets
+  #       key: API_KEY
+  # - name: LEMONSQUEEZY_API_KEY
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: grantsy-app-secrets
+  #       key: LEMONSQUEEZY_API_KEY
+  # - name: LEMONSQUEEZY_WEBHOOK_SECRET
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: grantsy-app-secrets
+  #       key: LEMONSQUEEZY_WEBHOOK_SECRET
+  # - name: OUTGOING_WEBHOOK_SECRET_1
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: grantsy-app-secrets
+  #       key: OUTGOING_WEBHOOK_SECRET_1
+  # - name: LOG_LEVEL
+  #   value: debug
+
+# envFrom sources — project an entire existing Secret or ConfigMap as env vars.
+# Convenient when you want to drop a whole Secret in without listing each key.
+envFrom: []
+  # - secretRef:
+  #     name: grantsy-app-secrets
+  # - configMapRef:
+  #     name: grantsy-extra-config
+
+# Free-form extra volumes and mounts.
+extraVolumes: []
+extraVolumeMounts: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Probes hit /healthz. App returns 503 during graceful shutdown drain phase, satisfying readiness drain.
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 2
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 2
+
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 2
+  periodSeconds: 2
+  failureThreshold: 30
+
+# App needs ~23s (5s drain + 15s shutdown + 3s hard wait). Buffer to 45s.
+terminationGracePeriodSeconds: 45
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# HPA only allowed when database.driver=postgres (sqlite is single-writer).
+# Chart fails rendering if autoscaling.enabled=true AND database.driver=sqlite.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Prometheus Operator integration. Off by default.
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}           # extra labels for Prometheus selector matching
+  relabelings: []
+  metricRelabelings: []

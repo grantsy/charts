@@ -1,0 +1,34 @@
+# Postgres scenario: HPA enabled, persistence off, DSN supplied via Secret.
+replicaCount: 2
+database:
+  driver: postgres
+  postgres:
+    dsnSecret:
+      name: grantsy-postgres
+      key: dsn
+persistence:
+  enabled: false
+ingress:
+  webhook:
+    enabled: true
+    host: hooks.example.test
+  api:
+    enabled: true
+    host: api.example.test
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+serviceMonitor:
+  enabled: true
+config:
+  env: prod
+  log:
+    level: info
+    format: json
+  metrics:
+    enable: true
+    path: /metrics

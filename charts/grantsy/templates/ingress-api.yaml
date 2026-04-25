@@ -1,0 +1,55 @@
+{{- if .Values.ingress.api.enabled -}}
+{{- $host := required "ingress.api.host is required when ingress.api.enabled=true" .Values.ingress.api.host -}}
+{{- $svcName := include "grantsy.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "grantsy.fullname" . }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "grantsy.labels" . | nindent 4 }}
+    grantsy.io/ingress: api
+  {{- with .Values.ingress.api.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.api.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  {{- if .Values.ingress.api.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ $host | quote }}
+        {{- range .Values.ingress.api.extraHosts }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- with $.Values.ingress.api.tls.secretName }}
+      secretName: {{ . | quote }}
+      {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.api.path | quote }}
+            pathType: {{ .Values.ingress.api.pathType }}
+            backend:
+              service:
+                name: {{ $svcName }}
+                port:
+                  number: {{ $svcPort }}
+    {{- range .Values.ingress.api.extraHosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: {{ $.Values.ingress.api.path | quote }}
+            pathType: {{ $.Values.ingress.api.pathType }}
+            backend:
+              service:
+                name: {{ $svcName }}
+                port:
+                  number: {{ $svcPort }}
+    {{- end }}
+{{- end }}
