@@ -3,6 +3,31 @@ entries:
   grantsy:
   - apiVersion: v2
     appVersion: v0.1.0
+    created: "2026-04-27T09:29:54.236882019Z"
+    description: Helm chart for Grantsy — entitlements service backed by Casbin.
+    digest: fdaab5645a330c1dc022446536220eb552635fe6d8827ef2a4516bb6ebb271cc
+    home: https://github.com/grantsy/grantsy
+    icon: https://raw.githubusercontent.com/grantsy/grantsy/main/logo.png
+    keywords:
+    - entitlements
+    - billing
+    - casbin
+    - lemonsqueezy
+    - saas
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: grantsy
+      url: https://github.com/grantsy
+    name: grantsy
+    sources:
+    - https://github.com/grantsy/grantsy
+    - https://github.com/grantsy/charts
+    type: application
+    urls:
+    - https://github.com/grantsy/charts/releases/download/grantsy-0.2.0/grantsy-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: v0.1.0
     created: "2026-04-26T00:51:36.383819+03:00"
     description: Helm chart for Grantsy — entitlements service backed by Casbin.
     digest: e9a35b5236687d71b2178e70ba4355e4617416e8b6d1f3e610c3fc37b632d164
@@ -26,4 +51,4 @@ entries:
     urls:
     - https://github.com/grantsy/charts/releases/download/grantsy-0.1.0/grantsy-0.1.0.tgz
     version: 0.1.0
-generated: "2026-04-26T00:51:36.383094+03:00"
+generated: "2026-04-27T09:29:54.236893936Z"
