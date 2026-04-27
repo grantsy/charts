@@ -61,20 +61,17 @@ ServiceAccount name.
 
 {{/*
 True when the chart should provision SQLite-backed storage and enforce single-replica behavior.
+Reads the operator's `config.database.driver`, defaulting to sqlite when unset.
 */}}
 {{- define "grantsy.usesSqlite" -}}
-{{- if eq .Values.database.driver "sqlite" -}}true{{- end -}}
+{{- if eq (dig "database" "driver" "sqlite" .Values.config) "sqlite" -}}true{{- end -}}
 {{- end -}}
 
 {{/*
-Name of the ConfigMap holding the rendered config.yaml. If existingConfigMap is set, defer to it.
+Name of the ConfigMap holding the rendered config.yaml.
 */}}
 {{- define "grantsy.configMapName" -}}
-{{- if .Values.existingConfigMap -}}
-{{- .Values.existingConfigMap -}}
-{{- else -}}
 {{- printf "%s-config" (include "grantsy.fullname" .) -}}
-{{- end -}}
 {{- end -}}
 
 {{/*

@@ -1,6 +1,6 @@
 {{- if .Values.autoscaling.enabled -}}
-{{- if eq .Values.database.driver "sqlite" -}}
-{{- fail "autoscaling cannot be enabled with database.driver=sqlite (single-writer)" -}}
+{{- if include "grantsy.usesSqlite" . -}}
+{{- fail "autoscaling cannot be enabled with config.database.driver=sqlite (single-writer)" -}}
 {{- end }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

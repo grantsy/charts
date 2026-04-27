@@ -16,23 +16,23 @@ LemonSqueezy webhook URL (paste this into the LemonSqueezy dashboard):
   Webhook ingress disabled. Enable `ingress.webhook` and set a host before configuring LemonSqueezy.
 {{- end }}
 
-{{- if and (eq .Values.database.driver "sqlite") (not .Values.persistence.enabled) }}
+{{- if and (include "grantsy.usesSqlite" .) (not .Values.persistence.enabled) }}
 
 WARNING: SQLite is enabled but persistence is OFF. The database lives on an emptyDir volume and
 will be wiped on every pod restart. Set persistence.enabled=true (and optionally provide
 persistence.existingClaim) before using this for anything you care about.
 {{- end }}
 
-{{- if eq .Values.database.driver "sqlite" }}
+{{- if include "grantsy.usesSqlite" . }}
 
 NOTE: SQLite is single-writer, so the chart pins replicaCount to 1 and disallows HPA. Switch
-database.driver to "postgres" if you need horizontal scaling.
+config.database.driver to "postgres" if you need horizontal scaling.
 {{- end }}
 
-REMINDER: app credentials (X-Api-Key, LEMONSQUEEZY_API_KEY, LEMONSQUEEZY_WEBHOOK_SECRET, outgoing
-webhook secrets, etc.) are passed through `env` / `envFrom` and resolved into the config file via
-${VAR} placeholders by the Grantsy binary at startup. The chart does not validate that every
-placeholder you wrote in `config:` has a matching env var — if startup fails with "empty api_key"
-or similar, double-check the env wiring.
+REMINDER: all app credentials (DATABASE_DSN for postgres, X-Api-Key, LEMONSQUEEZY_API_KEY,
+LEMONSQUEEZY_WEBHOOK_SECRET, outgoing webhook secrets, etc.) are passed through `env` / `envFrom`
+and resolved into the config file via ${VAR} placeholders by the Grantsy binary at startup. The
+chart does not validate that every placeholder you wrote in `config:` has a matching env var — if
+startup fails with "empty api_key" or "empty dsn" or similar, double-check the env wiring.
 
 Run `helm test {{ .Release.Name }}` to verify /healthz responds.

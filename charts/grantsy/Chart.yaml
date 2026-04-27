@@ -2,7 +2,7 @@ apiVersion: v2
 name: grantsy
 description: Helm chart for Grantsy — entitlements service backed by Casbin.
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "v0.1.0"
 home: https://github.com/grantsy/grantsy
 sources:

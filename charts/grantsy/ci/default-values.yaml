@@ -6,6 +6,10 @@ ingress:
     host: hooks.example.test
 config:
   env: prod
+  database:
+    driver: sqlite
+    namespace: grantsy
+    dsn: /var/lib/grantsy/grantsy.db
   server:
     host: 0.0.0.0
     port: 8080

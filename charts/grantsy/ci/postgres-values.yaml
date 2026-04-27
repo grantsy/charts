@@ -1,11 +1,5 @@
-# Postgres scenario: HPA enabled, persistence off, DSN supplied via Secret.
+# Postgres scenario: HPA enabled, persistence off, DSN supplied via Secret through env.
 replicaCount: 2
-database:
-  driver: postgres
-  postgres:
-    dsnSecret:
-      name: grantsy-postgres
-      key: dsn
 persistence:
   enabled: false
 ingress:
@@ -24,8 +18,18 @@ podDisruptionBudget:
   minAvailable: 1
 serviceMonitor:
   enabled: true
+env:
+  - name: DATABASE_DSN
+    valueFrom:
+      secretKeyRef:
+        name: grantsy-postgres
+        key: dsn
 config:
   env: prod
+  database:
+    driver: postgres
+    namespace: grantsy
+    dsn: "${DATABASE_DSN}"
   log:
     level: info
     format: json

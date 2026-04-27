@@ -54,33 +54,6 @@
       },
       "required": ["api", "webhook"]
     },
-    "database": {
-      "type": "object",
-      "properties": {
-        "driver":    { "type": "string", "enum": ["sqlite", "postgres"] },
-        "namespace": { "type": "string", "minLength": 1 },
-        "sqlite": {
-          "type": "object",
-          "properties": { "path": { "type": "string", "minLength": 1 } },
-          "required": ["path"]
-        },
-        "postgres": {
-          "type": "object",
-          "properties": {
-            "dsnSecret": {
-              "type": "object",
-              "properties": {
-                "name": { "type": "string" },
-                "key":  { "type": "string", "minLength": 1 }
-              },
-              "required": ["name", "key"]
-            }
-          },
-          "required": ["dsnSecret"]
-        }
-      },
-      "required": ["driver", "namespace"]
-    },
     "persistence": {
       "type": "object",
       "properties": {
@@ -94,8 +67,17 @@
       },
       "required": ["enabled", "size", "mountPath"]
     },
-    "existingConfigMap": { "type": "string" },
-    "config":            { "type": "object" },
+    "config": {
+      "type": "object",
+      "properties": {
+        "database": {
+          "type": "object",
+          "properties": {
+            "driver": { "type": "string", "enum": ["sqlite", "postgres"] }
+          }
+        }
+      }
+    },
     "env":               { "type": "array", "items": { "type": "object" } },
     "envFrom":           { "type": "array", "items": { "type": "object" } },
     "extraVolumes":      { "type": "array", "items": { "type": "object" } },

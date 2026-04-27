@@ -1,4 +1,4 @@
-# -- Number of replicas. Forced to 1 by the chart when database.driver=sqlite (single-writer).
+# -- Number of replicas. Forced to 1 by the chart when config.database.driver=sqlite (single-writer).
 replicaCount: 1
 
 image:
@@ -66,21 +66,7 @@ ingress:
       enabled: false
       secretName: ""
 
-# Database. Driver toggles persistence and DSN handling.
-# When driver=postgres the SQLite block is ignored; when driver=sqlite the Postgres block is ignored.
-database:
-  driver: sqlite       # sqlite | postgres
-  namespace: grantsy   # table prefix (sqlite) / schema name (postgres)
-
-  sqlite:
-    path: /var/lib/grantsy/grantsy.db   # must live under persistence.mountPath when persistence is on
-
-  postgres:
-    dsnSecret:
-      name: ""         # REQUIRED if driver=postgres
-      key: dsn
-
-# SQLite persistence. Auto-disabled by the chart when database.driver != sqlite.
+# SQLite persistence. Auto-disabled by the chart when config.database.driver != sqlite.
 persistence:
   enabled: true
   existingClaim: ""    # if set, chart skips PVC creation and uses this claim
@@ -90,16 +76,20 @@ persistence:
   mountPath: /var/lib/grantsy
   annotations: {}
 
-# Application config. Two mutually-exclusive modes (existingConfigMap takes precedence):
-#   existingConfigMap: <name>   → mount that ConfigMap (key must be "config.yaml"); `config:` is ignored.
-#   config: { ... }             → render into a chart-managed ConfigMap.
-# `config:` defaults to {} so the operator must populate it. No example plans/features included.
-existingConfigMap: ""
-
+# Application config. Rendered verbatim into a chart-managed ConfigMap and mounted at
+# /etc/grantsy/config.yaml. The operator must populate this — the chart provides no defaults.
+# `config.database.driver` (sqlite | postgres) is the single source of truth that drives PVC
+# provisioning, single-replica enforcement, and the HPA-with-sqlite guard. If unset, the chart
+# assumes sqlite.
 config: {}
 # Example shape (uncomment and fill in to use):
 # config:
 #   env: prod
+#   database:
+#     driver: sqlite                          # sqlite | postgres — drives PVC, replicas, HPA decisions
+#     namespace: grantsy
+#     dsn: /var/lib/grantsy/grantsy.db        # sqlite: file path under persistence.mountPath
+#     # dsn: "${DATABASE_DSN}"                # postgres: resolved from env below
 #   server:
 #     host: 0.0.0.0
 #     port: 8080
@@ -121,14 +111,9 @@ config: {}
 #   webhooks:
 #     endpoints: []           # [{url: https://app.example.com/hooks, secret: "${OUTGOING_WEBHOOK_SECRET_1}"}]
 #
-# Secret-bearing fields (api keys, webhook secrets) MUST be written as ${ENV_VAR} placeholders.
+# Secret-bearing fields (DSN, api keys, webhook secrets) MUST be written as ${ENV_VAR} placeholders.
 # The Grantsy binary runs os.ExpandEnv on the file before parsing, resolving them from env vars
 # defined under `env:` / `envFrom:` below.
-#
-# NOTE: when database.driver=postgres, the chart automatically appends a `database:` block
-# referencing ${DATABASE_DSN}. When database.driver=sqlite, the chart appends a `database:` block
-# pointing at the SQLite file path. Operators using `existingConfigMap` are responsible for the
-# entire file contents including the `database:` block.
 
 # Environment variables passed to the container.
 #
@@ -140,6 +125,11 @@ config: {}
 # All app credentials (X-Api-Key, LemonSqueezy keys, outgoing webhook secrets) are wired this way.
 # The chart does not create Secret resources for app credentials — operator manages those out-of-band.
 env: []
+  # - name: DATABASE_DSN
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: grantsy-postgres
+  #       key: dsn
   # - name: API_KEY
   #   valueFrom:
   #     secretKeyRef:
@@ -219,8 +209,8 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# HPA only allowed when database.driver=postgres (sqlite is single-writer).
-# Chart fails rendering if autoscaling.enabled=true AND database.driver=sqlite.
+# HPA only allowed when config.database.driver=postgres (sqlite is single-writer).
+# Chart fails rendering if autoscaling.enabled=true AND config.database.driver=sqlite.
 autoscaling:
   enabled: false
   minReplicas: 1
